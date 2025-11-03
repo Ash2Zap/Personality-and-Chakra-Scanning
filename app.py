@@ -1,12 +1,15 @@
-"""
-Streamlit app: Personality + Chakra Scan (open-source friendly)
-— Uses public‑domain Big Five–style items (IPIP-inspired, not Truity’s proprietary logic)
-— Presents each item as a 7‑dot horizontal picker (radio‑dot style) matching your screenshot
-— Mixes results with a Chakra scan (7 chakras) and produces a 5‑page PDF (2 pages personality, 3 pages chakras)
-— Branded UI: Soulful Academy logo, Playfair Display (headings), Poppins (body), purple‑gold theme, aura/mandala glow, gold CTA
-
-Files: single app.py
-"""
+# app.py — Personality + Chakra Scan (Soulful Academy Edition)
+# ------------------------------------------------------------
+# - Public-domain Big Five–style items (not Truity’s proprietary items/logic)
+# - Left↔Right 7-dot selector using native st.radio + CSS (no JS)
+# - Chakra scan (21 items), brand theme, logo, gold CTA
+# - PDF export: 2 pages personality + 3 pages chakras (with MyAuraBliss crystals)
+#
+# Requirements (requirements.txt):
+# streamlit
+# pandas
+# numpy
+# reportlab
 
 import io
 from dataclasses import dataclass
@@ -14,62 +17,84 @@ from typing import Dict, List, Tuple, Optional
 
 import numpy as np
 import pandas as pd
+import streamlit as st
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import cm
-from reportlab.pdfgen import canvas
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle, Image
-import streamlit as st
 
 # ---------------------------- BRAND THEME ---------------------------------
 PRIMARY_PURPLE = "#4B0082"
-ACCENT_PURPLE = "#6E3CBC"
-LAVENDER = "#D9B2FF"
-SOFT_GOLD = "#FFE6D9"
-CTA_GOLD_1 = "#FFD86F"
-CTA_GOLD_2 = "#FFB347"
-TEXT_VIOLET = "#2D033B"
+ACCENT_PURPLE  = "#6E3CBC"
+LAVENDER       = "#D9B2FF"   # bg start
+SOFT_GOLD_BG   = "#FFE6D9"   # bg end
+CTA_GOLD_1     = "#FFD86F"
+CTA_GOLD_2     = "#FFB347"
+TEXT_VIOLET    = "#2D033B"
+
+st.set_page_config(page_title="Personality + Chakra Scan", page_icon="🔮", layout="centered")
 
 CUSTOM_HEAD = f"""
-<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">
-<link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>
-<link href=\"https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Poppins:wght@300;400;500;600&display=swap\" rel=\"stylesheet\">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
+/* Background + layout */
 body {{
-  background: linear-gradient(135deg, {LAVENDER}, {SOFT_GOLD});
+  background: linear-gradient(135deg, {LAVENDER}, {SOFT_GOLD_BG});
 }}
-section.main > div {{max-width: 980px;}}
+section.main > div {{ max-width: 980px; }}
 :root {{ --accent: {ACCENT_PURPLE}; --purple: {PRIMARY_PURPLE}; --violet: {TEXT_VIOLET}; }}
 
-/* Header band */
+/* Header */
 .header-band {{
   background: linear-gradient(90deg, var(--accent), var(--purple));
   color: white; padding: 22px 24px; border-radius: 16px;
   box-shadow: 0 12px 36px rgba(78,0,130,.35); margin-bottom: 18px;
   border: 1px solid rgba(255,255,255,.15); position: relative; overflow:hidden;
 }}
-.header-band h1 {{margin:0; font-family: 'Playfair Display', serif; letter-spacing:.5px; font-weight:800; text-transform:uppercase; text-shadow:0 0 10px rgba(255,255,255,.2);}}
-.header-band p {{margin:6px 0 0 0; opacity:.95; font-family:'Poppins', sans-serif;}}
-.header-logo {{ position:absolute; right:18px; top:14px; width:84px; height:84px; border-radius:12px; box-shadow:0 8px 22px rgba(0,0,0,.2); background-size:cover; background-position:center; }}
+.header-band h1 {{
+  margin:0; font-family: 'Playfair Display', serif; letter-spacing:.5px;
+  font-weight:800; text-transform:uppercase; text-shadow:0 0 10px rgba(255,255,255,.2);
+}}
+.header-band p {{ margin:6px 0 0 0; opacity:.95; font-family:'Poppins', sans-serif; }}
+.header-logo {{ position:absolute; right:18px; top:14px; width:84px; height:84px;
+  border-radius:12px; box-shadow:0 8px 22px rgba(0,0,0,.2); background-size:cover; background-position:center; }}
 
 /* Card rows */
-.item-row {{border: 1px solid #f0dffb; border-left: 6px solid var(--accent);
-  border-radius: 14px; padding: 12px 14px; margin-bottom: 12px; background:#fff;}}
-.labels {{display:flex; justify-content:space-between; font-size:14px; color:#5a4a72; font-family:'Poppins', sans-serif;}}
-.small {{font-size:12px; color:#7c6b9a;}}
+.item-row {{
+  border: 1px solid #f0dffb; border-left: 6px solid var(--accent);
+  border-radius: 14px; padding: 12px 14px; margin-bottom: 12px; background:#fff;
+}}
+.labels {{ display:flex; justify-content:space-between; font-size:14px; color:#5a4a72; font-family:'Poppins', sans-serif; }}
 
-/* DOT PICKER (radio‑dot style) */
-.dot-row {{display:flex; gap:10px; align-items:center; margin-top:8px;}}
-.dot {{width:18px; height:18px; border-radius:50%; border:2px solid var(--accent); cursor:pointer; display:flex; align-items:center; justify-content:center;}}
-.dot-inner {{width:10px; height:10px; border-radius:50%; background:transparent;}}
-.dot.active {{border-color: var(--purple); box-shadow:0 0 0 3px rgba(110,60,188,.15);}}
-.dot.active .dot-inner {{background: var(--purple);}}
-.dot:hover {{transform:scale(1.08);}}
+/* Horizontal radio -> dot style */
+.stRadio > div {{ display: flex; gap: 10px; flex-wrap: nowrap; }}
+.stRadio label {{ margin-bottom: 0 !important; }}
+.stRadio div[role='radiogroup']  {{ display:flex; gap:10px; }}
 
-/* Chips & icons */
-.chip {{display:inline-block; padding:4px 10px; border-radius:999px; color:#fff; font-size:12px; margin-right:6px; font-family:'Poppins', sans-serif;}}
+.stRadio input[type="radio"] {{
+  /* hide native */
+  opacity: 0; width: 0; height: 0; position: absolute;
+}}
+.stRadio label span {{ display:none; }} /* hide numbers */
 
+.stRadio label {{
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 2px solid var(--accent); cursor: pointer;
+  position: relative; display: inline-flex; align-items:center; justify-content:center;
+}}
+.stRadio label:hover {{ transform: scale(1.08); }}
+
+.stRadio input[type="radio"]:checked + div > span::after,
+.stRadio input[type="radio"]:checked + span::after {{ /* compat */
+  content: "";
+  width: 10px; height: 10px; background: var(--purple); border-radius: 50%;
+  position: absolute;
+}}
+/* Fallback check: Streamlit wraps differently across versions; also target label::after when checked */
+.stRadio label::after {{ content: ""; width:0; height:0; }}
 /* CTA button */
 .stButton > button {{
   background: linear-gradient(135deg, {CTA_GOLD_1}, {CTA_GOLD_2});
@@ -77,32 +102,38 @@ section.main > div {{max-width: 980px;}}
   border-radius: 999px; padding: 10px 20px; box-shadow:0 10px 24px rgba(255,184,71,.35);
   font-family:'Poppins', sans-serif; text-transform:uppercase; letter-spacing:.4px;
 }}
-.stButton > button:hover {{ filter: brightness(1.05);}}
+.stButton > button:hover {{ filter: brightness(1.05); }}
 
-/* Aura / mandala glow behind benefits */
-.aura-box {{ position:relative; padding:18px; border-radius:16px; background:#ffffffcc;
-  border:1px solid #f0dffb; margin:10px 0 18px; }}
-.aura-box::before {{ content:''; position:absolute; inset:-40px; z-index:-1;
+/* Aura / mandala glow box */
+.aura-box {{
+  position:relative; padding:18px; border-radius:16px; background:#ffffffcc;
+  border:1px solid #f0dffb; margin:10px 0 18px;
+}}
+.aura-box::before {{
+  content:''; position:absolute; inset:-40px; z-index:-1;
   background: radial-gradient(closest-side, rgba(110,60,188,.30), transparent 70%),
               radial-gradient(closest-side, rgba(255,216,111,.25), transparent 70%);
-  filter: blur(20px); }}
+  filter: blur(20px);
+}}
 
 /* Typography */
 html, body, p, div, span {{ font-family:'Poppins', sans-serif; color:{TEXT_VIOLET}; }}
+
+#MainMenu {{visibility:hidden}} footer {{visibility:hidden}}
 </style>
 """
-
-# ---------------------------- PAGE SETUP ---------------------------------
-st.set_page_config(page_title="Personality + Chakra Scan", page_icon="🔮", layout="centered")
 st.markdown(CUSTOM_HEAD, unsafe_allow_html=True)
 
-logo_file = st.file_uploader("Upload your Soulful Academy logo (PNG)", type=["png","jpg","jpeg"], key="_logo")
+# ---------------------------- HEADER ---------------------------------
+logo_file = st.file_uploader("Upload your Soulful Academy logo (PNG/JPG)", type=["png","jpg","jpeg"], key="_logo")
 logo_style = ""
 if logo_file is not None:
-    # Save to a temp and use as CSS background in header
     import base64
     data = base64.b64encode(logo_file.read()).decode("utf-8")
-    logo_style = f"<div class='header-logo' style=\"background-image:url(data:image/png;base64,{data})\"></div>"
+    mime = "image/png"
+    if logo_file.type == "image/jpeg":
+        mime = "image/jpeg"
+    logo_style = f"<div class='header-logo' style=\"background-image:url(data:{mime};base64,{data})\"></div>"
 
 st.markdown(
     f"""
@@ -116,14 +147,14 @@ st.markdown(
 )
 
 # ------------------------- DATA DEFINITIONS ----------------------------
-from dataclasses import dataclass
 @dataclass
 class Item:
     left: str
     right: str
-    trait: str  # O C E A N
+    trait: str  # O C E A (N optional)
     reverse: bool = False
 
+# 20 public-domain-style pairs (IPIP-inspired)
 PERSONALITY_ITEMS: List[Item] = [
     Item("I am often disorganized", "I keep myself organized", "C"),
     Item("I decide with my head", "I decide with my heart", "A", reverse=True),
@@ -147,6 +178,7 @@ PERSONALITY_ITEMS: List[Item] = [
     Item("I speak my mind sharply", "I soften my words with care", "A"),
 ]
 
+# Chakra questions (3 per chakra)
 CHAKRA_QUESTIONS: Dict[str, List[str]] = {
     "Root": [
         "I feel safe and grounded in daily life.",
@@ -195,7 +227,7 @@ CHAKRA_COLORS = {
     "Crown": "#B39DDB",
 }
 
-# MyAuraBliss crystal recommendations (brand-ready text)
+# MyAuraBliss crystal recommendations
 MYAURABLISS = {
     "Root": ["Red Jasper", "Hematite", "Black Tourmaline"],
     "Sacral": ["Carnelian", "Orange Calcite", "Moonstone"],
@@ -206,74 +238,20 @@ MYAURABLISS = {
     "Crown": ["Clear Quartz", "Amethyst", "Selenite"],
 }
 
-# ------------------------- DOT PICKER WIDGET ------------------------------
-if "_dots" not in st.session_state: st.session_state["_dots"] = {}
-
-def dot_picker(key: str, default: int = 4) -> int:
-    val = st.session_state["_dots"].get(key, default)
-    cols = st.columns(7)
-    for i, c in enumerate(cols, start=1):
-        with c:
-            html = f"<div class='dot {'active' if val==i else ''}' onclick=\"parent.postMessage({{isStreamlitMessage:true, type:'streamlit:setComponentValue', value:{i}, key:'{key}'}}, '*')\"><div class='dot-inner'></div></div>"
-            st.markdown(html, unsafe_allow_html=True)
-    # Fallback buttons for keyboard navigation (hidden visually)
-    for i in range(1,8):
-        if st.button(f"{key}_btn_{i}", key=f"{key}_btn_{i}", help=str(i), use_container_width=False):
-            val = i
-    # Sync from component messages
-    val = st.session_state["_dots"].get(key, val)
-    st.session_state["_dots"][key] = val
+# ------------------------- HELPERS ------------------------------
+def dot_radio(key: str, default: int = 4) -> int:
+    """Render a horizontal 1..7 radio that looks like dots (CSS)."""
+    # NOTE: we pass labels "1".."7", but CSS hides the text and shows the dot.
+    options = list(range(1, 8))
+    idx = options.index(default) if key not in st.session_state else options.index(st.session_state.get(key, default))
+    val = st.radio("", options=options, index=idx, key=f"_radio_{key}", horizontal=True, label_visibility="collapsed")
+    # Keep a simple mirror in session_state for convenience if you need it elsewhere
+    st.session_state[key] = val
     return val
 
-# Minimal JS bridge (works on Streamlit Cloud)
-st.components.v1.html("""
-<script>
-window.addEventListener('message', (event) => {
-  const d = event.data || {};
-  if(d.isStreamlitMessage && d.type==='streamlit:setComponentValue'){
-    const key = d.key; const val = d.value;
-    const py = window.parent;
-    py.postMessage({type:'streamlit:setSessionState', key:key, value:val}, '*');
-  }
-});
-</script>
-""", height=0)
-
-# ------------------------- FORM RENDERING ------------------------------
-st.header("Part 1 · Personality")
-st.caption("From each pair, choose the one that describes you best. 1 = left, 7 = right.")
-
-responses: List[Tuple[Item, int]] = []
-for idx, item in enumerate(PERSONALITY_ITEMS, start=1):
-    with st.container():
-        st.markdown(f"<div class='item-row'>", unsafe_allow_html=True)
-        st.markdown(
-            f"<div class='labels'><span>{item.left}</span><span>{item.right}</span></div>",
-            unsafe_allow_html=True,
-        )
-        val = dot_picker(f"q{idx}", 4)
-        st.markdown("</div>", unsafe_allow_html=True)
-        responses.append((item, val))
-
-st.markdown("<div class='aura-box'><b>Benefits</b>: Instant insights, Chakra remedies, and a branded PDF report for your clients. ✅</div>", unsafe_allow_html=True)
-
-st.divider()
-st.header("Part 2 · Chakra Scan")
-st.caption("Rate each statement (1 = Strongly Disagree, 7 = Strongly Agree). Higher is healthier.")
-
-chakra_scores: Dict[str, List[int]] = {name: [] for name in CHAKRA_QUESTIONS}
-for chakra, qs in CHAKRA_QUESTIONS.items():
-    st.subheader(chakra)
-    for i, q in enumerate(qs, start=1):
-        with st.container():
-            st.write(q)
-            val = dot_picker(f"{chakra}_{i}", 4)
-        chakra_scores[chakra].append(val)
-    st.markdown("---")
-
-# ----------------------- SCORING & SUMMARIES ---------------------------
 @st.cache_data
 def score_personality(items_with_scores: List[Tuple[Item, int]]) -> Dict[str, float]:
+    # Map 1..7 to -3..+3 scale so midpoint = 0
     trait_values: Dict[str, List[float]] = {t: [] for t in list("OCEAN")}
     for item, raw in items_with_scores:
         val = (raw - 4)  # -3..+3
@@ -288,7 +266,7 @@ def summarize_trait(name: str, score: float) -> str:
     label = next(lbl for lo,hi,lbl in bands if lo <= score < hi)
     blurbs = {
         "O": {
-            "Low": "Prefers the familiar and practical; benefits from gentle novelty and creative play.",
+            "Low": "Prefers the familiar and practical; try gentle novelty and creative play.",
             "Below Average": "Enjoys practical ideas; add small exploration rituals.",
             "Balanced": "Healthy mix of curiosity and pragmatism.",
             "High": "Imaginative and future-focused; ground ideas into plans.",
@@ -329,40 +307,79 @@ def summarize_trait(name: str, score: float) -> str:
 def score_chakras(scores: Dict[str, List[int]]) -> Dict[str, float]:
     return {k: float(np.mean(v)) if v else 0.0 for k, v in scores.items()}
 
-@st.cache_data
+def chakra_status(val: float) -> str:
+    return "Balanced" if 3.8 <= val <= 5.8 else ("Overactive" if val > 5.8 else "Blocked")
+
 def chakra_remedy_block(status: str, chakra: str) -> str:
     remedies = {
-        "Root": "Grounding walk barefoot, 4‑7‑8 breathing, red foods; crystals: "+", ".join(MYAURABLISS["Root"]) ,
-        "Sacral": "Creative play, water ritual; crystals: "+", ".join(MYAURABLISS["Sacral"]) ,
-        "Solar Plexus": "Power postures, small wins list; crystals: "+", ".join(MYAURABLISS["Solar Plexus"]) ,
-        "Heart": "Loving‑kindness, gratitude letters; crystals: "+", ".join(MYAURABLISS["Heart"]) ,
-        "Throat": "Humming/singing, ‘truth sandwich’; crystals: "+", ".join(MYAURABLISS["Throat"]) ,
-        "Third Eye": "10‑min visualization, dream notes; crystals: "+", ".join(MYAURABLISS["Third Eye"]) ,
-        "Crown": "Morning silence, seva; crystals: "+", ".join(MYAURABLISS["Crown"]) ,
+        "Root": "Grounding walk barefoot, 4-7-8 breathing, red foods.",
+        "Sacral": "Creative play, water ritual, forgiveness journal.",
+        "Solar Plexus": "Power postures, small wins list, daily ‘No’.",
+        "Heart": "Loving-kindness meditation, gratitude letters.",
+        "Throat": "Humming/singing, write and read your needs.",
+        "Third Eye": "10-min visualization, dream notes, screen-light limits at night.",
+        "Crown": "Morning silence, seva, study a wisdom text.",
     }
-    base = remedies.get(chakra, "")
-    return f"{status}: {base}"
+    crystals = ", ".join(MYAURABLISS.get(chakra, []))
+    return f"{status}: {remedies.get(chakra,'')}  •  Crystals: {crystals}"
 
+# ------------------------- FORM RENDERING ------------------------------
+st.header("Part 1 · Personality")
+st.caption("From each pair, choose the one that describes you best. 1 = left, 7 = right.")
+
+responses: List[Tuple[Item, int]] = []
+for idx, item in enumerate(PERSONALITY_ITEMS, start=1):
+    with st.container():
+        st.markdown(f"<div class='item-row'>", unsafe_allow_html=True)
+        st.markdown(
+            f"<div class='labels'><span>{item.left}</span><span>{item.right}</span></div>",
+            unsafe_allow_html=True,
+        )
+        val = dot_radio(f"q{idx}", 4)
+        st.markdown("</div>", unsafe_allow_html=True)
+        responses.append((item, val))
+
+st.markdown(
+    "<div class='aura-box'><b>Benefits</b>: Instant insights, chakra remedies, and a branded PDF report for your clients. ✅</div>",
+    unsafe_allow_html=True,
+)
+
+st.divider()
+st.header("Part 2 · Chakra Scan")
+st.caption("Rate each statement (1 = Strongly Disagree, 7 = Strongly Agree). Higher is healthier.")
+
+chakra_scores: Dict[str, List[int]] = {name: [] for name in CHAKRA_QUESTIONS}
+for chakra, qs in CHAKRA_QUESTIONS.items():
+    st.subheader(chakra)
+    for i, q in enumerate(qs, start=1):
+        with st.container():
+            st.write(q)
+            val = dot_radio(f"{chakra}_{i}", 4)
+        chakra_scores[chakra].append(val)
+    st.markdown("---")
+
+# ----------------------- RESULTS + PDF --------------------------------
 if st.button("📊 Calculate Results", type="primary"):
     trait_scores = score_personality(responses)
-    chakra_avg = score_chakras(chakra_scores)
+    chakra_avg   = score_chakras(chakra_scores)
 
     st.subheader("Personality Summary (Big Five style)")
-    df_traits = pd.DataFrame({"Trait": list(trait_scores.keys()), "Score (-3..+3)": list(trait_scores.values())})
+    df_traits = pd.DataFrame({"Trait": list(trait_scores.keys()),
+                              "Score (-3..+3)": list(trait_scores.values())})
     st.dataframe(df_traits, use_container_width=True)
-
     for t, s in trait_scores.items():
         st.markdown(f"**{t}**: {summarize_trait(t, s)}")
 
     st.subheader("Chakra Status (1–7)")
-    df_ch = pd.DataFrame({"Chakra": list(chakra_avg.keys()), "Avg": list(chakra_avg.values())}).sort_values("Chakra")
+    df_ch = pd.DataFrame({"Chakra": list(chakra_avg.keys()),
+                          "Avg": list(chakra_avg.values())}).sort_values("Chakra")
     st.dataframe(df_ch, use_container_width=True)
 
     st.markdown("#### Remedies & Tips")
     for ch, val in chakra_avg.items():
         color = CHAKRA_COLORS.get(ch, "#666")
-        chip = f"<span class='chip' style='background:{color}'>{ch}</span>"
-        status = "Balanced" if 3.8 <= val <= 5.8 else ("Overactive" if val > 5.8 else "Blocked")
+        chip  = f"<span class='chip' style='background:{color};padding:4px 10px;border-radius:999px;color:#fff;font-size:12px;margin-right:6px'>{ch}</span>"
+        status = chakra_status(val)
         advice = chakra_remedy_block(status, ch)
         st.markdown(chip + f" **{status}** · Avg {val:.1f} — {advice}", unsafe_allow_html=True)
 
@@ -381,7 +398,7 @@ if st.button("📊 Calculate Results", type="primary"):
             except Exception:
                 pass
 
-        def h(txt):
+        def h(txt):  # Title style
             return Paragraph(f"<para align='center'><font face='Playfair Display'><b>{txt}</b></font></para>", styles["Title"])
 
         # Page 1: Personality Overview
@@ -407,20 +424,20 @@ if st.button("📊 Calculate Results", type="primary"):
         story.append(Paragraph("<b>Growth Suggestions</b>", styles["Heading2"]))
         tips = [
             "Pair high Openness with weekly shipping goals.",
-            "Support low Conscientiousness with two anchor habits (sleep window, 30‑min focus).",
+            "Support low Conscientiousness with two anchor habits (sleep window, 30-min focus).",
             "If Extraversion is high, book solo reflection blocks; if low, plan 1 meaningful social slot.",
             "Balance Agreeableness with clear boundaries.",
         ]
         for t in tips:
             story.append(Paragraph(f"• {t}", styles["Normal"]))
 
-        # Page 3–5: Chakras
+        # Pages 3–5: Chakras
         def chakra_table(title: str, subset: List[Tuple[str, float]]):
             story.append(Spacer(1, 24))
             story.append(Paragraph(f"<b>{title}</b>", styles["Heading2"]))
             data = [["Chakra", "Avg (1–7)", "Status", "MyAuraBliss Crystals", "Remedy"]]
             for ch, val in subset:
-                status = "Balanced" if 3.8 <= val <= 5.8 else ("Overactive" if val > 5.8 else "Blocked")
+                status = chakra_status(val)
                 crystals = ", ".join(MYAURABLISS.get(ch, []))
                 data.append([ch, f"{val:.1f}", status, crystals, chakra_remedy_block(status, ch)])
             tbl = Table(data, colWidths=[3*cm, 2.7*cm, 3*cm, 5*cm, 4*cm])
@@ -445,23 +462,16 @@ if st.button("📊 Calculate Results", type="primary"):
 
     pdf_bytes = build_pdf(trait_scores, chakra_avg, logo_bytes)
     st.download_button(
-        "📄 Download Full Report (PDF)", data=pdf_bytes, file_name="personality_chakra_report.pdf",
-        mime="application/pdf"
+        "📄 Download Full Report (PDF)",
+        data=pdf_bytes,
+        file_name="personality_chakra_report.pdf",
+        mime="application/pdf",
     )
 
-st.markdown("""
----
-**Notes & IP:** This app uses public‑domain Big Five–style statements and original scoring. We do **not** copy or reproduce Truity’s proprietary content or algorithms. The left/right layout is inspired by many tests but implemented uniquely here.
-
-**Deploy:**
-1) Save this file as `app.py` in a GitHub repo.
-2) Add `requirements.txt` with:
-```
-streamlit
-pandas
-numpy
-reportlab
-```
-3) Deploy to Streamlit Cloud → New app → point to the repo.
-""")
-
+# ------------------------ Footer Notes ---------------------------------
+st.markdown(
+    "<p style='text-align:center;color:#6E3CBC;font-family:Poppins;font-size:13px;'>"
+    "© Soulful Academy — Created with love & light ✨"
+    "</p>",
+    unsafe_allow_html=True
+)
