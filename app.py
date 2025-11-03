@@ -24,7 +24,7 @@ from reportlab.graphics.charts.barcharts import VerticalBarChart
 APP_TITLE = "Soulful Academy — Personality + Chakra Scan"
 LOGO_PATH = "assets/soulful_logo.png"   # place your logo here
 SAVE_TO_CSV = True                      # set False to disable local CSV saving
-PAID_GATE_ENABLED = False               # set True to require payment before PDF download (stub)
+PAID_GATE_ENABLED = True               # set True to require payment before PDF download (stub)
 
 # Colors / theme
 PRIMARY_PURPLE = "#4B0082"
@@ -510,3 +510,4 @@ if submitted:
 # 1) Implement Stripe or Razorpay Checkout server endpoint (best: cloud function)
 # 2) After successful payment, set st.session_state['paid'] = True (via redirect with session_id verification)
 # 3) Flip PAID_GATE_ENABLED = True above to gate the Download button
+
