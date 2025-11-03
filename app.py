@@ -1,8 +1,8 @@
-# app.py — Soulful Academy: Personality + Chakra Scan
-# - Auto logo from /assets/soulful_logo.png
-# - Client info form
-# - Clean native radio dots
-# - Professional 6-page PDF (cover + personality + chakras)
+# Soulful Academy — Personality + Chakra Scan (Final Pro PDF)
+# - Logo auto-load from assets/soulful_logo.png
+# - Client details on cover
+# - Clean single radio dots
+# - Pro 6-page PDF: Cover • Personality Table • Personality Tips • Chakra Dashboard • Chakra Remedies (2 pages)
 
 import io, os, base64, datetime as dt
 from dataclasses import dataclass
@@ -16,11 +16,11 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
-from reportlab.platypus import (
-    Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle, Image, PageBreak
-)
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle, Image, PageBreak
+from reportlab.graphics.shapes import Drawing, Rect, String
+from reportlab.graphics.charts.barcharts import VerticalBarChart
 
-# ------------------- Theme -------------------
+# ---------- THEME ----------
 PRIMARY_PURPLE = "#4B0082"
 ACCENT_PURPLE  = "#6E3CBC"
 LAVENDER       = "#D9B2FF"
@@ -31,8 +31,8 @@ TEXT_VIOLET    = "#2D033B"
 
 st.set_page_config(page_title="Soulful Academy — Personality + Chakra Scan", page_icon="🔮", layout="centered")
 
-# ------------------- Logo -------------------
-LOGO_PATH = "assets/soulful_logo.png"  # place your logo file here
+# ---------- LOGO ----------
+LOGO_PATH = "assets/soulful_logo.png"
 logo_bytes: Optional[bytes] = None
 logo_html = ""
 if os.path.exists(LOGO_PATH):
@@ -41,7 +41,7 @@ if os.path.exists(LOGO_PATH):
         b64 = base64.b64encode(logo_bytes).decode("utf-8")
         logo_html = f"<div class='header-logo' style=\"background-image:url(data:image/png;base64,{b64})\"></div>"
 
-# ------------------- CSS -------------------
+# ---------- CSS ----------
 st.markdown(f"""
 <style>
 body {{
@@ -67,25 +67,21 @@ section.main > div {{ max-width: 980px; }}
   box-shadow:0 8px 22px rgba(0,0,0,.2);
 }}
 
-/* Radio styling (single native dots) */
-.stRadio div[role='radiogroup'] {{
-  display:flex; justify-content:center; gap:18px; align-items:center;
-}}
+/* Radios (single native dots) */
+.stRadio div[role='radiogroup'] {{ display:flex; justify-content:center; gap:18px; align-items:center; }}
 .stRadio [role="radio"] {{ transform: scale(1.25); accent-color: var(--accent); }}
 .stRadio label {{ color: var(--purple); font-weight: 500; font-size: 15px; }}
 
 /* CTA */
 .stButton > button {{
   background:linear-gradient(135deg,{CTA_GOLD_1},{CTA_GOLD_2});
-  color:{PRIMARY_PURPLE}; border:none; font-weight:700;
-  border-radius:999px; padding:10px 20px;
-  box-shadow:0 10px 24px rgba(255,184,71,.35);
-  text-transform:uppercase; letter-spacing:.4px;
+  color:{PRIMARY_PURPLE}; border:none; font-weight:700; border-radius:999px; padding:10px 20px;
+  box-shadow:0 10px 24px rgba(255,184,71,.35); text-transform:uppercase; letter-spacing:.4px;
 }}
 </style>
 """, unsafe_allow_html=True)
 
-# ------------------- Header -------------------
+# ---------- HEADER ----------
 st.markdown(f"""
 <div class='header-band'>
   {logo_html}
@@ -94,19 +90,19 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ------------------- Client Info -------------------
+# ---------- CLIENT INFO ----------
 c1, c2, c3 = st.columns([1.2, 1, 1])
 client_name = c1.text_input("Client Name", value="")
 coach_name  = c2.text_input("Coach / Healer", value="Rekha Babulkar")
 session_date = c3.text_input("Session Date", value=dt.datetime.now().strftime("%d-%m-%Y"))
 
-gcol1, gcol2, gcol3 = st.columns([0.8, 0.8, 4])
-gender = gcol1.radio("Gender", ["Female", "Male", "Other"], horizontal=True, index=0)
+g1, g2, g3 = st.columns([0.8, 0.8, 4])
+gender = g1.radio("Gender", ["Female", "Male", "Other"], horizontal=True, index=0)
 intent = st.text_input("Client Intent / Focus", value="Relationship healing / Money flow / Health")
 
 st.divider()
 
-# ------------------- Personality Items -------------------
+# ---------- PERSONALITY ----------
 @dataclass
 class Item:
     left: str
@@ -144,43 +140,15 @@ for i, item in enumerate(PERSONALITY_ITEMS, start=1):
     responses.append((item, dot_radio(f"q{i}", 4)))
     st.markdown("---")
 
-# ------------------- Chakra Questions -------------------
+# ---------- CHAKRA ----------
 CHAKRA_QUESTIONS: Dict[str, List[str]] = {
-    "Root": [
-        "I feel safe and grounded in daily life.",
-        "I keep consistent routines (sleep, food, movement).",
-        "I manage money and basic needs calmly.",
-    ],
-    "Sacral": [
-        "I allow myself pleasure and creativity.",
-        "My relationships feel warm and emotionally alive.",
-        "I express feelings without guilt or shame.",
-    ],
-    "Solar Plexus": [
-        "I take decisive action toward goals.",
-        "I keep healthy boundaries and say no when needed.",
-        "I trust my capability to handle challenges.",
-    ],
-    "Heart": [
-        "I forgive myself and others with ease.",
-        "I feel connected to people and life.",
-        "I practice gratitude and compassion daily.",
-    ],
-    "Throat": [
-        "I speak my truth calmly and clearly.",
-        "I listen well and communicate honestly.",
-        "I express my needs without fear.",
-    ],
-    "Third Eye": [
-        "I reflect and learn from patterns in my life.",
-        "I visualize outcomes before I act.",
-        "I trust my intuition when logic is equal.",
-    ],
-    "Crown": [
-        "I feel guided by a higher purpose.",
-        "I spend time in silence or meditation.",
-        "I experience moments of awe or connection.",
-    ],
+    "Root": ["I feel safe and grounded in daily life.","I keep consistent routines (sleep, food, movement).","I manage money and basic needs calmly."],
+    "Sacral": ["I allow myself pleasure and creativity.","My relationships feel warm and emotionally alive.","I express feelings without guilt or shame."],
+    "Solar Plexus": ["I take decisive action toward goals.","I keep healthy boundaries and say no when needed.","I trust my capability to handle challenges."],
+    "Heart": ["I forgive myself and others with ease.","I feel connected to people and life.","I practice gratitude and compassion daily."],
+    "Throat": ["I speak my truth calmly and clearly.","I listen well and communicate honestly.","I express my needs without fear."],
+    "Third Eye": ["I reflect and learn from patterns in my life.","I visualize outcomes before I act.","I trust my intuition when logic is equal."],
+    "Crown": ["I feel guided by a higher purpose.","I spend time in silence or meditation.","I experience moments of awe or connection."],
 }
 
 MYAURABLISS = {
@@ -203,12 +171,12 @@ for ch, qs in CHAKRA_QUESTIONS.items():
         chakra_scores[ch].append(dot_radio(f"{ch}_{j}", 4))
     st.markdown("---")
 
-# ------------------- Scoring -------------------
+# ---------- SCORING ----------
 @st.cache_data
 def score_personality(items: List[Tuple[Item,int]]) -> Dict[str,float]:
     vals={t:[] for t in "OCEAN"}
     for it,val in items:
-        v=(val-4)  # -3..+3
+        v=(val-4)  # -3..+3 centered
         if it.reverse: v=-v
         vals[it.trait].append(v)
     return {t: float(np.mean(v)) if v else 0 for t,v in vals.items()}
@@ -216,7 +184,7 @@ def score_personality(items: List[Tuple[Item,int]]) -> Dict[str,float]:
 def summarize_trait(name:str,score:float)->str:
     bands=[(-3,-1.6,"Low"),(-1.6,-0.5,"Below Avg"),(-0.5,0.5,"Balanced"),(0.5,1.6,"High"),(1.6,3.1,"Very High")]
     label=next(lbl for lo,hi,lbl in bands if lo<=score<hi)
-    return f"**{label}**"
+    return f"{label}"
 
 @st.cache_data
 def score_chakras(scores: Dict[str, List[int]]) -> Dict[str, float]:
@@ -232,131 +200,168 @@ def chakra_remedy(status: str, chakra: str) -> str:
     crystals=", ".join(MYAURABLISS.get(chakra, []))
     return f"{status}: {base.get(chakra,'')} • Crystals: {crystals}"
 
-# ------------------- PDF Builder (PRO style) -------------------
+# Chakra colors for PDF bars
+CHAKRA_COLORS = {
+    "Root": "#EA4335", "Sacral": "#F4A261", "Solar Plexus": "#E9C46A",
+    "Heart": "#34A853", "Throat": "#4285F4", "Third Eye": "#7E57C2", "Crown": "#B39DDB"
+}
+
+# ---------- PRO PDF ----------
 def build_pdf(traits: Dict[str,float],
               chakras: Dict[str,float],
               logo: Optional[bytes],
               meta: Dict[str,str]) -> bytes:
     buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
+    doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=28, rightMargin=28, topMargin=28, bottomMargin=28)
 
-    s = getSampleStyleSheet()
-    # Custom styles
-    H1 = ParagraphStyle("H1", parent=s["Title"], alignment=0, fontSize=22, leading=26, textColor=colors.HexColor("#222"))
-    H2 = ParagraphStyle("H2", parent=s["Heading2"], fontSize=16, leading=20, textColor=colors.HexColor("#311B92"))
-    SMALL = ParagraphStyle("SMALL", parent=s["Normal"], fontSize=9, textColor=colors.HexColor("#555"))
-    NORMAL = s["Normal"]
+    styles = getSampleStyleSheet()
+    H1 = ParagraphStyle("H1", parent=styles["Title"], fontSize=22, leading=26, textColor=colors.HexColor("#212121"), alignment=0)
+    H2 = ParagraphStyle("H2", parent=styles["Heading2"], fontSize=16, leading=20, textColor=colors.HexColor("#311B92"))
+    SMALL = ParagraphStyle("SMALL", parent=styles["Normal"], fontSize=9, textColor=colors.HexColor("#616161"))
+    NORMAL = styles["Normal"]
+    BOLD = ParagraphStyle("BOLD", parent=NORMAL, fontName="Helvetica-Bold")
 
     story = []
 
-    # ====== PAGE 1: Branded Cover with Client details ======
-    # Header band with logo + title (table layout)
-    header_data = []
+    # Cover
     left_cell = []
     if logo:
         left_cell.append(Image(io.BytesIO(logo), width=90, height=90))
-    header_table = Table([
-        [left_cell, Paragraph("<b>Soulful Academy – Chakra & Personality Report</b>", H1)]
-    ], colWidths=[3.2*cm, 13.8*cm], hAlign="LEFT")
-    header_table.setStyle(TableStyle([
-        ("VALIGN", (0,0), (-1,-1), "MIDDLE"),
-        ("BOTTOMPADDING", (0,0), (-1,-1), 8),
-    ]))
-    story += [header_table, Spacer(1, 4),
-              Paragraph("A diagnostic template for your clients. Fill → download → email.", SMALL),
-              Spacer(1, 16)]
+    header = Table([[left_cell, Paragraph("<b>Soulful Academy — Chakra & Personality Report</b>", H1)]],
+                   colWidths=[3.0*cm, 14.0*cm])
+    header.setStyle(TableStyle([("VALIGN",(0,0),(-1,-1),"MIDDLE")]))
+    story += [header, Spacer(1,6), Paragraph("A diagnostic report you can email to the client.", SMALL), Spacer(1,14)]
 
-    # Client info band
-    ci = [
+    details = [
         ["Client", meta.get("client","—")],
         ["Coach / Healer", meta.get("coach","—")],
         ["Session Date", meta.get("date","—")],
         ["Gender", meta.get("gender","—")],
         ["Intent / Focus", meta.get("intent","—")],
     ]
-    ci_tbl = Table(ci, colWidths=[3.5*cm, 13.5*cm])
-    ci_tbl.setStyle(TableStyle([
-        ("GRID", (0,0), (-1,-1), 0.25, colors.HexColor("#DDDDDD")),
-        ("BACKGROUND", (0,0), (0,-1), colors.HexColor("#F7F5FD")),
-        ("TEXTCOLOR", (0,0), (0,-1), colors.HexColor("#311B92")),
-        ("FONTNAME", (0,0), (-1,0), "Helvetica"),
-        ("VALIGN", (0,0), (-1,-1), "MIDDLE"),
-        ("ROWBACKGROUNDS", (1,0), (1,-1), [colors.whitesmoke, colors.HexColor("#FAFAFA")]),
+    dtbl = Table(details, colWidths=[3.5*cm, 13.5*cm])
+    dtbl.setStyle(TableStyle([
+        ("GRID",(0,0),(-1,-1),0.25,colors.HexColor("#CCCCCC")),
+        ("BACKGROUND",(0,0),(0,-1),colors.HexColor("#EEE7FF")),
+        ("TEXTCOLOR",(0,0),(0,-1),colors.HexColor("#311B92")),
+        ("VALIGN",(0,0),(-1,-1),"MIDDLE"),
     ]))
-    story += [ci_tbl, Spacer(1, 10),
-              Paragraph("Generated by Soulful Academy | What You Seek is Seeking You.", SMALL),
-              PageBreak()]
+    story += [dtbl, PageBreak()]
 
-    # ====== PAGE 2: Personality Profile ======
-    story += [Paragraph("Personality Profile (Big Five style)", H2), Spacer(1, 8)]
-    pdata = [["Trait", "Score (-3..+3)", "Summary"]]
-    for t, v in traits.items():
-        pdata.append([t, f"{v:.2f}", summarize_trait(t, v)])
-    ptable = Table(pdata, colWidths=[3*cm, 4*cm, 9.5*cm])
+    # Personality
+    story += [Paragraph("Personality Profile (Big Five style)", H2), Spacer(1,6)]
+
+    def personality_verdict(ts: Dict[str,float]) -> str:
+        o, c, e, a = ts.get("O",0), ts.get("C",0), ts.get("E",0), ts.get("A",0)
+        if c>1.0 and o>0.5: return "Organized Visionary"
+        if e>1.0 and a>0.5: return "Warm Communicator"
+        if o>1.2 and c<-0.5: return "Creative Explorer"
+        if c>1.2 and e<-0.5: return "Calm Strategist"
+        return "Balanced Builder"
+
+    verdict = personality_verdict(traits)
+    story += [Paragraph(f"<b>What kind of personality are you?</b> {verdict}", NORMAL), Spacer(1,8)]
+
+    pdata = [["Trait","Score (-3..+3)","Summary"]]
+    for t,v in traits.items():
+        pdata.append([t, f"{v:.2f}", summarize_trait(t,v)])
+    ptable = Table(pdata, colWidths=[3.0*cm, 3.8*cm, 10.7*cm])
     ptable.setStyle(TableStyle([
-        ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#EDE7F6")),
-        ("TEXTCOLOR", (0,0), (-1,0), colors.HexColor("#311B92")),
-        ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
-        ("GRID", (0,0), (-1,-1), 0.25, colors.HexColor("#CCCCCC")),
-        ("VALIGN", (0,0), (-1,-1), "TOP"),
-        ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.whitesmoke, colors.HexColor("#FAFAFA")]),
+        ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#EDE7F6")),
+        ("TEXTCOLOR",(0,0),(-1,0),colors.HexColor("#311B92")),
+        ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+        ("GRID",(0,0),(-1,-1),0.25,colors.HexColor("#BBBBBB")),
+        ("VALIGN",(0,0),(-1,-1),"TOP"),
+        ("ROWBACKGROUNDS",(0,1),(-1,-1),[colors.whitesmoke, colors.HexColor("#FAFAFA")]),
     ]))
-    story += [ptable, Spacer(1, 6),
-              Paragraph("Scores are centered at 0 (balanced). Higher/lower describe tendencies, not limits.", SMALL),
-              PageBreak()]
+    story += [ptable, Spacer(1,8)]
 
-    # ====== PAGE 3: Personality Growth Tips ======
-    story += [Paragraph("Growth Insights", H2)]
-    tips = [
-        "Balance creativity with grounded actions.",
-        "Use 2 anchor habits (sleep window, 30-min deep work) to support consistency.",
-        "If Extraversion is high, schedule solo reflection; if low, plan one meaningful social slot.",
-        "Balance Agreeableness with clear boundaries and ‘no’ practice."
+    align_points = [
+        "With high-C (organized) people: agree on clear timelines and definitions of done.",
+        "With high-O (creative) people: brainstorm first, then lock one experiment to ship.",
+        "With high-E (expressive) people: allow talk-time, then summarize action points.",
+        "With high-A (kind) people: invite honest feedback and set gentle boundaries.",
     ]
-    for t in tips:
-        story.append(Paragraph("• " + t, NORMAL))
+    story += [Paragraph("<b>How to align with other personalities</b>", BOLD)]
+    for tip in align_points:
+        story.append(Paragraph("• "+tip, NORMAL))
     story.append(PageBreak())
 
-    # ====== PAGES 4–6: Chakra Scan ======
+    # Chakra Dashboard
+    story += [Paragraph("Chakra Dashboard", H2), Spacer(1,4)]
+
+    def bar_row(name: str, val: float) -> Table:
+        pct = max(0, min(100, round(val/7*100)))
+        col = colors.HexColor(CHAKRA_COLORS.get(name, "#777"))
+        d = Drawing(260, 14)
+        d.add(Rect(0, 0, 260, 14, fillColor=colors.HexColor("#EEEEEE"), strokeColor=None))
+        d.add(Rect(0, 0, 2.6*pct, 14, fillColor=col, strokeColor=None))
+        d.add(String(2.6*pct+6 if pct<90 else 8, 10, f"{pct}%", fontSize=8, fillColor=colors.HexColor("#333333")))
+        status = chakra_status(val)
+        why = f"Why: {status} — score {val:.1f}."
+        what = "What: focus daily 10–12 min awareness on this chakra."
+        rem = chakra_remedy(status, name)
+        row = [Paragraph(f"<b>{name}</b>", NORMAL), d, Paragraph(why, SMALL), Paragraph(rem, SMALL)]
+        t = Table([row], colWidths=[2.8*cm, 7.0*cm, 4.2*cm, 6.0*cm])
+        t.setStyle(TableStyle([("VALIGN",(0,0),(-1,-1),"MIDDLE"), ("GRID",(0,0),(-1,-1),0.25,colors.HexColor("#DDDDDD"))]))
+        return t
+
+    for ch, val in chakras.items():
+        story.append(bar_row(ch, val))
+        story.append(Spacer(1,4))
+
+    story.append(Spacer(1,6))
+    story.append(Paragraph("<b>Chakra balance snapshot (1–7)</b>", NORMAL))
+    chart = Drawing(420, 160)
+    bc = VerticalBarChart()
+    bc.x = 40; bc.y = 30; bc.height = 110; bc.width = 340
+    bc.data = [tuple(chakras[k] for k in chakras.keys())]
+    bc.categoryAxis.categoryNames = list(chakras.keys())
+    bc.valueAxis.valueMin = 0; bc.valueAxis.valueMax = 7; bc.valueAxis.valueStep = 1
+    bc.barWidth = 18
+    bc.bars[0].fillColor = colors.HexColor("#6E3CBC")
+    chart.add(bc)
+    story.append(chart)
+    story.append(PageBreak())
+
+    # Chakra Remedies tables (2 pages)
     items = list(chakras.items())
 
     def chakra_table(title_txt: str, subset: List[Tuple[str,float]]):
         story.append(Paragraph(title_txt, H2))
-        data = [["Chakra", "Avg (1–7)", "Status", "MyAuraBliss Crystals", "Remedy"]]
+        data = [["Chakra","Avg (1–7)","Status","MyAuraBliss Crystals","Why / What / Remedies"]]
         for ch, val in subset:
             stat = chakra_status(val)
             crystals = ", ".join(MYAURABLISS.get(ch, []))
-            data.append([ch, f"{val:.1f}", stat, crystals, chakra_remedy(stat, ch)])
-        tbl = Table(data, colWidths=[3*cm, 2.7*cm, 3*cm, 5*cm, 4*cm])
+            why = f"Why: {stat} at {val:.1f}."
+            what = "What: 10–12 min daily attention; journal changes."
+            rem = chakra_remedy(stat, ch)
+            data.append([ch, f"{val:.1f}", stat, crystals, f"{why} {what} {rem}"])
+        tbl = Table(data, colWidths=[3.0*cm, 2.5*cm, 2.8*cm, 5.0*cm, 7.5*cm])
         tbl.setStyle(TableStyle([
-            ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#E8EAF6")),
-            ("TEXTCOLOR", (0,0), (-1,0), colors.HexColor("#1A237E")),
-            ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
-            ("GRID", (0,0), (-1,-1), 0.25, colors.HexColor("#CCCCCC")),
-            ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.whitesmoke, colors.HexColor("#FAFAFA")]),
+            ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#E8EAF6")),
+            ("TEXTCOLOR",(0,0),(-1,0),colors.HexColor("#1A237E")),
+            ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+            ("GRID",(0,0),(-1,-1),0.25,colors.HexColor("#CFCFCF")),
+            ("VALIGN",(0,0),(-1,-1),"TOP"),
+            ("ROWBACKGROUNDS",(0,1),(-1,-1),[colors.whitesmoke, colors.HexColor("#FAFAFA")]),
         ]))
         story.append(tbl)
 
-    chakra_table("Chakra Scan — Part 1", items[:3]); story.append(PageBreak())
-    chakra_table("Chakra Scan — Part 2", items[3:5]); story.append(PageBreak())
-    chakra_table("Chakra Scan — Part 3", items[5:])
+    chakra_table("Chakra Remedies — Part 1", items[:3]); story.append(PageBreak())
+    chakra_table("Chakra Remedies — Part 2", items[3:5]); story.append(PageBreak())
+    chakra_table("Chakra Remedies — Part 3", items[5:])
 
     doc.build(story)
     return buf.getvalue()
 
-# ------------------- Results & Download -------------------
+# ---------- GENERATE ----------
 if st.button("📊 Generate Full Report", type="primary"):
     traits = score_personality(responses)
     chakras = score_chakras(chakra_scores)
-
-    meta = {
-        "client": client_name.strip() or "—",
-        "coach": coach_name.strip() or "—",
-        "date": session_date.strip() or "—",
-        "gender": gender,
-        "intent": intent.strip() or "—",
-    }
-
+    meta = {"client": client_name.strip() or "—", "coach": coach_name.strip() or "—",
+            "date": session_date.strip() or "—", "gender": gender, "intent": intent.strip() or "—"}
     pdf_bytes = build_pdf(traits, chakras, logo_bytes, meta)
-    st.success("Report ready.")
-    st.download_button("📄 Download PDF", data=pdf_bytes, file_name=f"SoulfulAcademy_Report_{meta['client'] or 'Client'}.pdf", mime="application/pdf")
+    st.download_button("📄 Download PDF", data=pdf_bytes,
+                       file_name=f"SoulfulAcademy_Report_{meta['client'] or 'Client'}.pdf",
+                       mime="application/pdf")
