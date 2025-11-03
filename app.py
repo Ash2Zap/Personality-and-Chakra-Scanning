@@ -34,13 +34,14 @@ TEXT_VIOLET    = "#2D033B"
 st.set_page_config(page_title="Personality + Chakra Scan", page_icon="🔮", layout="centered")
 
 CUSTOM_HEAD = f"""
-<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">
-<link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>
-<link href=\"https://fonts.googleapis.com/css2?family=Playfair+Display:wght@800&family=Poppins:wght@300;400;600&display=swap\" rel=\"stylesheet\">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@800&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
 body {{ background: linear-gradient(135deg, {LAVENDER}, {SOFT_GOLD_BG}); }}
 section.main > div {{ max-width: 980px; }}
 :root {{ --accent:{ACCENT_PURPLE}; --purple:{PRIMARY_PURPLE}; --violet:{TEXT_VIOLET}; }}
+
 /* Header */
 .header-band {{
   background: linear-gradient(90deg, var(--accent), var(--purple));
@@ -55,26 +56,44 @@ section.main > div {{ max-width: 980px; }}
 .header-band p {{ margin:6px 0 0 0; opacity:.95; font-family:'Poppins',sans-serif; }}
 .header-logo {{ position:absolute; right:18px; top:14px; width:84px; height:84px; border-radius:12px;
   box-shadow:0 8px 22px rgba(0,0,0,.2); background-size:cover; background-position:center; }}
+
 /* Cards */
 .item-row {{ border:1px solid #f0dffb; border-left:6px solid var(--accent); border-radius:14px; padding:12px 14px; margin-bottom:12px; background:#fff; }}
 .left-label, .right-label {{ font-size:14px; color:#5a4a72; font-family:'Poppins',sans-serif; line-height:1.35; }}
+
 /* Radio as dots */
 .stRadio > div {{ display:flex; gap:10px; }}
 .stRadio div[role='radiogroup'] {{ display:flex; gap:10px; justify-content:center; }}
-.stRadio input[type=\"radio\"] {{ opacity:0; width:0; height:0; position:absolute; }}
-.stRadio label {{ width:20px; height:20px; border-radius:50%; border:2px solid var(--accent); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; color:transparent !important; }}
+.stRadio input[type="radio"] {{ opacity:0; width:0; height:0; position:absolute; }}
+.stRadio label {{
+  width:20px; height:20px; border-radius:50%;
+  border:2px solid var(--accent); cursor:pointer;
+  display:inline-flex; align-items:center; justify-content:center;
+  color:transparent !important; /* hide 1..7 text */
+}}
 .stRadio label:hover {{ transform:scale(1.08); }}
-.stRadio input[type=\"radio\"]:checked + div > span::after,
-.stRadio input[type=\"radio\"]:checked + span::after {{ content:\"\"; width:10px; height:10px; background:var(--purple); border-radius:50%; position:absolute; }}
+.stRadio input[type="radio"]:checked + div > span::after,
+.stRadio input[type="radio"]:checked + span::after {{
+  content:""; width:10px; height:10px; background:var(--purple); border-radius:50%; position:absolute;
+}}
+
 /* CTA */
-.stButton > button {{ background:linear-gradient(135deg,{CTA_GOLD_1},{CTA_GOLD_2}); color:{PRIMARY_PURPLE}; border:none; font-weight:700; border-radius:999px; padding:10px 20px; box-shadow:0 10px 24px rgba(255,184,71,.35); font-family:'Poppins',sans-serif; text-transform:uppercase; letter-spacing:.4px; }}
+.stButton > button {{
+  background:linear-gradient(135deg,{CTA_GOLD_1},{CTA_GOLD_2});
+  color:{PRIMARY_PURPLE}; border:none; font-weight:700; border-radius:999px; padding:10px 20px;
+  box-shadow:0 10px 24px rgba(255,184,71,.35); font-family:'Poppins',sans-serif; text-transform:uppercase; letter-spacing:.4px;
+}}
+
 /* Aura box */
 .aura-box {{ position:relative; padding:18px; border-radius:16px; background:#ffffffcc; border:1px solid #f0dffb; margin:10px 0 18px; }}
-.aura-box::before {{ content:''; position:absolute; inset:-40px; z-index:-1; background: radial-gradient(closest-side, rgba(110,60,188,.30), transparent 70%), radial-gradient(closest-side, rgba(255,216,111,.25), transparent 70%); filter: blur(20px); }}
+.aura-box::before {{ content:''; position:absolute; inset:-40px; z-index:-1;
+  background: radial-gradient(closest-side, rgba(110,60,188,.30), transparent 70%),
+              radial-gradient(closest-side, rgba(255,216,111,.25), transparent 70%);
+  filter: blur(20px); }}
+
 html, body, p, div, span {{ font-family:'Poppins',sans-serif; color:{TEXT_VIOLET}; }}
 </style>
 """
-
 st.markdown(CUSTOM_HEAD, unsafe_allow_html=True)
 
 # ---------------------------- HEADER ---------------------------------
